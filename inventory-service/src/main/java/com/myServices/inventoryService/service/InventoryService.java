@@ -3,6 +3,8 @@ package com.myServices.inventoryService.service;
 import com.myServices.inventoryService.dto.InventoryResponse;
 import com.myServices.inventoryService.repository.InventoryRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,10 +13,15 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class InventoryService {
     private final InventoryRepository inventoryRepository;
     @Transactional(readOnly = true)
-    public List<InventoryResponse> isInStock(List<String> skuCodes) {
+    @SneakyThrows //not for production!!
+    public List<InventoryResponse> isInStock(List<String> skuCodes){
+//        log.info("Wait started.");
+//        Thread.sleep(10000); //simulating slow behavior
+//        log.info("Wait ended");
         // Find the inventory items matching the provided skuCodes
         List<InventoryResponse> responses = inventoryRepository.findBySkuCodeIn(skuCodes)
                 .stream()
