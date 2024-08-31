@@ -2,12 +2,17 @@ package com.MyServices.ProductService;
 
 import com.MyServices.ProductService.DTO.ProductRequest;
 import com.MyServices.ProductService.repository.ProductRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.restassured.RestAssured;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -21,35 +26,31 @@ import java.math.BigDecimal;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
-@AutoConfigureMockMvc
 class ProductServiceApplicationTests {
-
 	@Container
+	@ServiceConnection
 	static MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:4.4.2");
-
-	@Autowired
-	private MockMvc mockMvc;
-	@Autowired
-	private ProductRepository productRepository;
-
-	@DynamicPropertySource
-	static void setProperties(DynamicPropertyRegistry dynamicPropertyRegistry) {
-		dynamicPropertyRegistry.add("spring.data.mongodb.url", mongoDBContainer::getReplicaSetUrl);
+	@LocalServerPort
+	private Integer port;
+	@BeforeEach
+	void setup(){
+		RestAssured.baseURI = "http://localhost:" + port;
 	}
-
+	static {
+		mongoDBContainer.start();
+	}
 	@Test
 	void shouldCreateProduct() throws Exception {
 		ProductRequest productRequest = getProductRequest();
-		String productRequestString = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(productRequest);
-		// use mock mvc
-		mockMvc.perform(MockMvcRequestBuilders.post("/api/product")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(productRequestString))
-				.andExpect(status().isCreated());
-        Assertions.assertEquals(1, productRepository.findAll().size()); //confirming if its there
-
+		String productRequestString = new ObjectMapper().writeValueAsString(productRequest);
+		RestAssured.given().contentType("application/json").body(productRequestString)
+				.when().post("/api/product").then().statusCode(201)
+				.body("id", org.hamcrest.Matchers.notNullValue())
+				.body("name", org.hamcrest.Matchers.equalTo(productRequest.getName()))
+				.body("description", org.hamcrest.Matchers.equalTo(productRequest.getDescription()))
+				.body("price", org.hamcrest.Matchers.equalTo(productRequest.getPrice().intValue()));
 	}
 
 	private ProductRequest getProductRequest() {
@@ -59,6 +60,4 @@ class ProductServiceApplicationTests {
 				.price(BigDecimal.valueOf(1000))
 				.build();
 	}
-
-
 }

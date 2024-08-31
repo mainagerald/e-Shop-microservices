@@ -17,17 +17,16 @@ import java.util.List;
 public class ProductService {
     private final ProductRepository productRepository;
 
-    public void createProduct(ProductRequest productRequest){
+    public ProductResponse createProduct(ProductRequest productRequest){
         Product product=Product.builder()
                 .name(productRequest.getName())
                 .description(productRequest.getDescription())
                 .price(productRequest.getPrice())
                 .build();
-
-        productRepository.save(product);
-        log.info("Product {} is saved", product.getId());
+        Product savedProduct=productRepository.save(product);
+        log.info("Product {} is saved", savedProduct.getId());
+        return mapToProductResponse(savedProduct);
     }
-
     public List<ProductResponse> getAllProducts() {
         List<Product> products= productRepository.findAll();
         System.out.println("Number of products in database: " + products.size());
